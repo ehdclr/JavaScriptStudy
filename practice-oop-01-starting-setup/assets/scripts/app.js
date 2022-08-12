@@ -93,6 +93,7 @@ class ProjectItem {
     this.updateProjectListsHandler = updateProjectListsFunction;
     this.connectMoreInfoButton();
     this.connectSwitchButton(type);
+    this.connectDrag();
   }
   showMoreInfoHandler() {
     if (this.hasActiveTooltip) {
@@ -111,6 +112,22 @@ class ProjectItem {
     );
     tooltip.attach();
     this.hasActiveTooltip = true;
+  }
+
+  connectDrag() {
+    const item = document.getElementById(this.id);
+    item.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", this.id);
+      //드래그 이벤트기 때문에 데이터 통신 객체가 있을 것
+      //setData 메소드는 서로 다른 유형의 데이터를 설정할 수 있다.
+      //식별자에 의해 식별된 평문 어떤 문구든 가능
+      //두번째 인자는 this.id id가 끝에 있으므로 그냥 this.id
+      event.dataTransfer.effectAllowed = "move";
+      //어떤 종류의 드래그앤 드롭이 처리되는지를 설명
+    });
+    item.addEventListener("dragend", (event) => {
+      console.log(event);
+    });
   }
 
   connectMoreInfoButton() {
@@ -155,6 +172,54 @@ class ProjectList {
       );
     }
     console.log(this.projects);
+    this.connectDroppable();
+  }
+
+  connectDroppable() {
+    const list = document.querySelector(`#${this.type}-projects ul`);
+
+    //둘의 차이는 트리거 될 때 하위 요소를 포함하는지
+    list.addEventListener("dragenter", (event) => {
+      if (event.dataTransfer.types[0] === "text/plain") {
+        list.parentElement.classList.add("droppable");
+        event.preventDefault();
+      }
+      //요소를 드롭하는 것이 가능하고 드롭이벤트가 트리거 됨
+      //prevent하지않으면 요소를 드롭할 순 있어도. 드롭이벤트가 트리거 안됨
+      //드래그할 때 옳은 데이터만 받아들이기 위해서 if문으로 함 확인하는 절차
+      //데이터 유형만 파악이 가능하다 id읽는 것이 불가능함
+    });
+
+    list.addEventListener("dragover", (event) => {
+      if (event.dataTransfer.types[0] === "text/plain") {
+        event.preventDefault();
+      }
+    });
+
+    list.addEventListener("dragleave", (event) => {
+      //가장 가까운 ul에서 벗어났는지 확인하는 것임
+      if (event.relatedTarget.closest(`#${this.type}-projects ul`) !== list) {
+        list.parentElement.classList.remove("droppable");
+      }
+    });
+
+    list.addEventListener("drop", (event) => {
+      const prjId = event.dataTransfer.getData("text/plain");
+      // 이벤트 리스너가 작동중인 그 리스트의 프로젝트에서
+      //이 id를 가진 프로젝트를 찾을 수 있는지
+      // 그리스트에서 할당된 프로젝트에서 일치하는 id의 프로젝트를 찾았다면
+      //이미 그게 속해있던 리스트에 드롭한 것임
+      if (this.projects.find((p) => p.id === prjId)) {
+        return; //함수를 더이상 실행 x
+      }
+      //드래그해서 꺼내면 다른 곳에 추가하면 기존은 삭제되고 새로운곳에 추가
+      //드래그하면 클릭이 되도록 할 수 있음
+      document
+        .getElementById(prjId)
+        .querySelector("button:last-of-type")
+        .click();
+      list.parentElement.classList.remove("droppable");
+    });
   }
 
   setSwitchHandlerFunction(switchHandlerFunction) {
@@ -204,20 +269,20 @@ class App {
     //다른 스크립트를 특정 시간에 다운로드 가능함
     // this.startAnalytics();
     //앱이 시작되면 바로 실행 가능 //init때문에
-    document
-      .getElementById("start-analytics-btn")
-      .addEventListener("click", this.startAnalytics);
+    // document
+    //   .getElementById("start-analytics-btn")
+    //   .addEventListener("click", this.startAnalytics);
     //페이지 로드 후 5초후 로드
-    const timerId = setTimeout(this.startAnalytics, 3000);
-    //async의 예시임
+    // const timerId = setTimeout(this.startAnalytics, 3000);
+    // //async의 예시임
 
-    document
-      .getElementById("stop-analytics-btn")
-      .addEventListener("click", () => {
-        clearTimeout(timerId);
-      });
-    //3초전에 클릭하면 안나타남
-    //간격 타이머 설정도 없앨 수 있음
+    // document
+    //   .getElementById("stop-analytics-btn")
+    //   .addEventListener("click", () => {
+    //     clearTimeout(timerId);
+    //   });
+    // //3초전에 클릭하면 안나타남
+    // //간격 타이머 설정도 없앨 수 있음
   }
 
   static startAnalytics() {
